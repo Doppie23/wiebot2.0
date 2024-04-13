@@ -1,11 +1,13 @@
 using Discord.Interactions;
-using Discord.WebSocket;
 
-static partial class Commands
+namespace Commands
 {
-    [SlashCommand("ping", "pong")]
-    public static async Task Ping(SocketSlashCommand command)
+    public partial class General : InteractionModuleBase
     {
-        await command.RespondAsync("pong");
+        [SlashCommand("ping", "pong")]
+        public async Task Ping()
+        {
+            await this.RespondAsync("pong");
+        }
     }
 }

@@ -1,15 +1,16 @@
-using System.Reflection;
+// https://github.com/discord-net/Discord.Net/blob/dev/samples/InteractionFramework/Program.cs
+
 using Newtonsoft.Json;
 using Discord;
-using Discord.Net;
 using Discord.WebSocket;
 using Discord.Interactions;
+using System.Reflection;
 
 class WieBot
 {
     private readonly DiscordSocketClient client;
+    private readonly InteractionService interactionService;
     private readonly Config config;
-    private readonly Dictionary<string, MethodInfo> commands = new();
 
     public WieBot()
     {
@@ -17,13 +18,56 @@ class WieBot
             new DiscordSocketConfig() { GatewayIntents = GatewayIntents.All }
         );
 
-        this.config = JsonConvert.DeserializeObject<Config>(
-            File.ReadAllText("../../../../config.json")
+        this.interactionService = new InteractionService(
+            client.Rest,
+            new InteractionServiceConfig() { LogLevel = LogSeverity.Verbose }
         );
 
-        this.client.Log += Log;
-        this.client.Ready += this.ClientReady;
-        this.client.SlashCommandExecuted += this.SlashCommandHandler;
+        // TODO: check if config has all required values
+        this.config = JsonConvert.DeserializeObject<Config>(File.ReadAllText("./config.json"));
+
+        this.client.Log += (LogMessage message) =>
+        {
+            Console.WriteLine(message.ToString());
+            return Task.CompletedTask;
+        };
+
+        this.client.Ready += async () =>
+        {
+            await this.interactionService.RegisterCommandsToGuildAsync(this.config.GuildId);
+        };
+
+        this.client.InteractionCreated += async (SocketInteraction interaction) =>
+        {
+            try
+            {
+                var context = new SocketInteractionContext(this.client, interaction);
+
+                var result = await this.interactionService.ExecuteCommandAsync(context, null);
+
+                if (!result.IsSuccess)
+                    switch (result.Error)
+                    {
+                        case InteractionCommandError.UnmetPrecondition:
+
+                            throw new Exception("UnmetPrecondition in SlashCommand");
+                        default:
+                            break;
+                    }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"[ERROR] {e.Message}");
+                if (interaction.Type is InteractionType.ApplicationCommand)
+                {
+                    await interaction.DeleteOriginalResponseAsync();
+                    await interaction.RespondAsync(
+                        "Sorry man, werkt ff niet ofzo weet ik veel",
+                        ephemeral: true
+                    );
+                }
+            }
+        };
 
         this.client.MessageReceived += async (SocketMessage message) =>
         {
@@ -39,129 +83,12 @@ class WieBot
 
     public async Task Start()
     {
+        await this.interactionService.AddModulesAsync(Assembly.GetEntryAssembly(), null);
+
         await this.client.LoginAsync(TokenType.Bot, this.config.Token);
         await this.client.StartAsync();
 
         await Task.Delay(-1);
-    }
-
-    private Task Log(LogMessage message)
-    {
-        Console.WriteLine(message.ToString());
-        return Task.CompletedTask;
-    }
-
-    private async Task ClientReady()
-    {
-        var guild = client.GetGuild(this.config.GuildId);
-
-        // get all command handlers from the `Commands` class
-        Console.WriteLine();
-        Console.WriteLine("------------------------------");
-        Type type = typeof(Commands);
-
-        var slashCommands = new List<SlashCommandBuilder>();
-
-        MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
-
-        foreach (MethodInfo method in methods)
-        {
-            var registerd = false;
-            var problems = new List<string>();
-
-            if (method.ReturnType == typeof(Task))
-            {
-                var attributes = method.GetCustomAttributes(true);
-
-                foreach (var attribute in attributes)
-                {
-                    if (attribute.GetType() != typeof(SlashCommandAttribute))
-                        continue;
-
-                    if (method.GetParameters()[0].ParameterType != typeof(SocketSlashCommand))
-                    {
-                        problems.Add("it does not accept a SocketSlashCommand");
-                        continue;
-                    }
-
-                    var slashCommandAttribute = (SlashCommandAttribute)attribute;
-
-                    var guildCommand = new SlashCommandBuilder();
-
-                    guildCommand.WithName(slashCommandAttribute.Name);
-                    guildCommand.WithDescription(slashCommandAttribute.Description);
-
-                    slashCommands.Add(guildCommand);
-                    this.commands.Add(slashCommandAttribute.Name, method);
-
-                    Console.WriteLine(
-                        $"    [INFO] Registered Command {slashCommandAttribute.Name}"
-                    );
-
-                    registerd = true;
-                    break;
-                }
-
-                if (!registerd)
-                    problems.Add("it does not have a SlashCommandAttribute");
-            }
-            else
-            {
-                problems.Add("it does not return a Task");
-            }
-
-            if (!registerd)
-            {
-                Console.WriteLine($"    [WARN] {method.Name} not registered because:");
-                foreach (var problem in problems)
-                {
-                    Console.WriteLine($"        - {problem}");
-                }
-            }
-        }
-        Console.WriteLine("------------------------------");
-        Console.WriteLine();
-
-        try
-        {
-            await guild.DeleteApplicationCommandsAsync();
-
-            foreach (var slashCommand in slashCommands)
-            {
-                await guild.CreateApplicationCommandAsync(slashCommand.Build());
-            }
-        }
-        catch (HttpException exception)
-        {
-            var json = JsonConvert.SerializeObject(exception.Errors, Formatting.Indented);
-            Console.WriteLine(json);
-        }
-    }
-
-    private async Task SlashCommandHandler(SocketSlashCommand command)
-    {
-        try
-        {
-            var method = this.commands[command.Data.Name];
-
-            if (
-                method.GetParameters().Length != 1
-                || method.GetParameters()[0].ParameterType != typeof(SocketSlashCommand)
-            )
-            {
-                throw new Exception(
-                    "method does not accept correct arguments, it should take a SocketSlashCommand"
-                );
-            }
-
-            var resultTask = (Task)method.Invoke(null, new object[] { command });
-            await resultTask;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            await command.RespondAsync("Dat commando ken ik niet...", null, false, true);
-        }
     }
 }
 
