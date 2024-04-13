@@ -13,7 +13,9 @@ class WieBot
 
     public WieBot()
     {
-        this.client = new DiscordSocketClient();
+        this.client = new DiscordSocketClient(
+            new DiscordSocketConfig() { GatewayIntents = GatewayIntents.All }
+        );
 
         this.config = JsonConvert.DeserializeObject<Config>(
             File.ReadAllText("../../../../config.json")
@@ -22,6 +24,17 @@ class WieBot
         this.client.Log += Log;
         this.client.Ready += this.ClientReady;
         this.client.SlashCommandExecuted += this.SlashCommandHandler;
+
+        this.client.MessageReceived += async (SocketMessage message) =>
+        {
+            if (message.Author.Id == this.client.CurrentUser.Id)
+                return;
+
+            if (message.Content.ToLower().StartsWith("wie"))
+            {
+                await message.Channel.SendMessageAsync($"{message.Author.Mention} wie vroeg?");
+            }
+        };
     }
 
     public async Task Start()
@@ -42,39 +55,81 @@ class WieBot
     {
         var guild = client.GetGuild(this.config.GuildId);
 
-        var guildCommand = new SlashCommandBuilder();
-
         // get all command handlers from the `Commands` class
+        Console.WriteLine();
+        Console.WriteLine("------------------------------");
         Type type = typeof(Commands);
 
-        MethodInfo[] methods = type.GetMethods();
+        var slashCommands = new List<SlashCommandBuilder>();
+
+        MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
 
         foreach (MethodInfo method in methods)
         {
-            if (method.ReturnType == typeof(System.Threading.Tasks.Task))
+            var registerd = false;
+            var problems = new List<string>();
+
+            if (method.ReturnType == typeof(Task))
             {
                 var attributes = method.GetCustomAttributes(true);
 
                 foreach (var attribute in attributes)
                 {
-                    if (attribute.GetType() == typeof(SlashCommandAttribute))
+                    if (attribute.GetType() != typeof(SlashCommandAttribute))
+                        continue;
+
+                    if (method.GetParameters()[0].ParameterType != typeof(SocketSlashCommand))
                     {
-                        var slashCommandAttribute = (SlashCommandAttribute)attribute;
-
-                        guildCommand.WithName(slashCommandAttribute.Name);
-                        guildCommand.WithDescription(slashCommandAttribute.Description);
-
-                        this.commands.Add(slashCommandAttribute.Name, method);
-
-                        Console.WriteLine($"Registered Command {slashCommandAttribute.Name}");
+                        problems.Add("it does not accept a SocketSlashCommand");
+                        continue;
                     }
+
+                    var slashCommandAttribute = (SlashCommandAttribute)attribute;
+
+                    var guildCommand = new SlashCommandBuilder();
+
+                    guildCommand.WithName(slashCommandAttribute.Name);
+                    guildCommand.WithDescription(slashCommandAttribute.Description);
+
+                    slashCommands.Add(guildCommand);
+                    this.commands.Add(slashCommandAttribute.Name, method);
+
+                    Console.WriteLine(
+                        $"    [INFO] Registered Command {slashCommandAttribute.Name}"
+                    );
+
+                    registerd = true;
+                    break;
+                }
+
+                if (!registerd)
+                    problems.Add("it does not have a SlashCommandAttribute");
+            }
+            else
+            {
+                problems.Add("it does not return a Task");
+            }
+
+            if (!registerd)
+            {
+                Console.WriteLine($"    [WARN] {method.Name} not registered because:");
+                foreach (var problem in problems)
+                {
+                    Console.WriteLine($"        - {problem}");
                 }
             }
         }
+        Console.WriteLine("------------------------------");
+        Console.WriteLine();
 
         try
         {
-            await guild.CreateApplicationCommandAsync(guildCommand.Build());
+            await guild.DeleteApplicationCommandsAsync();
+
+            foreach (var slashCommand in slashCommands)
+            {
+                await guild.CreateApplicationCommandAsync(slashCommand.Build());
+            }
         }
         catch (HttpException exception)
         {
