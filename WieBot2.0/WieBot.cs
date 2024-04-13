@@ -1,5 +1,3 @@
-// https://github.com/discord-net/Discord.Net/blob/dev/samples/InteractionFramework/Program.cs
-
 using Newtonsoft.Json;
 using Discord;
 using Discord.WebSocket;
@@ -24,6 +22,7 @@ class WieBot
         );
 
         // TODO: check if config has all required values
+        // TODO: add isDev to config
         this.config = JsonConvert.DeserializeObject<Config>(File.ReadAllText("./config.json"));
 
         this.client.Log += (LogMessage message) =>
