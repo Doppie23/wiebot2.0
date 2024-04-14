@@ -18,6 +18,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>public/%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Content>
+
+    <Content Include="../lib/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
