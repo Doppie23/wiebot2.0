@@ -2,4 +2,6 @@ bin
 obj
 /.vs
 
+/WieBot2.0/Migrations
+
 config.json

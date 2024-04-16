@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using DataBase;
 using Discord;
 using Discord.WebSocket;
 using Discord.Interactions;
@@ -10,6 +11,8 @@ class WieBot
     private readonly DiscordSocketClient client;
     private readonly IServiceProvider serviceProvider;
     private readonly InteractionService interactionService;
+    private readonly DataBaseContext dataBase;
+
     private readonly Config config;
 
     public WieBot()
@@ -17,6 +20,8 @@ class WieBot
         // TODO: check if config has all required values
         // TODO: add isDev to config
         this.config = JsonConvert.DeserializeObject<Config>(File.ReadAllText("./config.json"));
+
+        this.dataBase = new DataBaseContext();
 
         this.serviceProvider = this.CreateProvider();
 
@@ -95,7 +100,7 @@ class WieBot
 
     private IServiceProvider CreateProvider()
     {
-        var collection = new ServiceCollection().AddSingleton(new DataBase());
+        var collection = new ServiceCollection().AddSingleton(this.dataBase);
 
         return collection.BuildServiceProvider();
     }

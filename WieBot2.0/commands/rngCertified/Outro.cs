@@ -7,6 +7,8 @@ namespace Commands
 {
     public partial class RngCertified : InteractionModuleBase
     {
+        public DataBase.DataBaseContext DataBase { get; set; }
+
         public enum Choices
         {
             [ChoiceDisplay("Crab Rave")]
@@ -20,6 +22,14 @@ namespace Commands
 
             [ChoiceDisplay("RNG certified")]
             rngCertified
+        }
+
+        class OutroInfo
+        {
+            public string Path { get; set; }
+            public string Message { get; set; }
+            public bool IsForPoints { get; set; } = false;
+            public Emoji[] Reactions { get; set; } = Array.Empty<Emoji>();
         }
 
         private static readonly Dictionary<Choices, OutroInfo> OutroPath =
@@ -61,7 +71,6 @@ namespace Commands
         public async Task Outro([Name("opties")] RngCertified.Choices selectedOutro)
         {
             // TODO: rng outro points
-            // TODO: score most last left
 
             var channel = (Context.User as IGuildUser)?.VoiceChannel;
             if (channel == null)
@@ -118,15 +127,42 @@ namespace Commands
 
             await Task.WhenAll(tasks);
             if (lastLeft != null)
+            {
+                this.DataBase.AddOutroScore(lastLeft.Id, this.Context.Guild.Id);
                 await Context.Interaction.FollowupAsync(lastLeft.Mention);
+            }
         }
 
-        class OutroInfo
+        [SlashCommand("outroleaderboard", "@boodschapjes")]
+        public async Task Outroleaderboard()
         {
-            public string Path { get; set; }
-            public string Message { get; set; }
-            public bool IsForPoints { get; set; } = false;
-            public Emoji[] Reactions { get; set; } = Array.Empty<Emoji>();
+            var outroUsers = DataBase.GetOutroScores(this.Context.Guild.Id);
+
+            List<Task<(int, IUser)>> tasks = new();
+
+            foreach (var user in outroUsers)
+            {
+                async Task<(int, IUser)> task()
+                {
+                    var discordUser = await Context.Client.GetUserAsync(user.Id);
+                    return (user.OutroScore, discordUser);
+                }
+
+                tasks.Add(task());
+            }
+
+            var users = (await Task.WhenAll(tasks)).ToList();
+            users.Sort((x, y) => x.Item1 - y.Item1);
+
+            var message = "";
+            foreach (var user in users)
+            {
+                var score = user.Item1;
+                var discordUser = user.Item2;
+                message += $"{discordUser.Mention} {score}\n";
+            }
+
+            await RespondAsync(message);
         }
     }
 }
