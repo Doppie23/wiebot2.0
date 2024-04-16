@@ -27,12 +27,7 @@ namespace Commands
             {
                 {
                     Choices.crabRave,
-                    new OutroInfo()
-                    {
-                        Path = "./public/outro/crabrave.mp3",
-                        Message = ":crab:",
-                        IsForPoints = false,
-                    }
+                    new OutroInfo() { Path = "./public/outro/crabrave.mp3", Message = ":crab:", }
                 },
                 {
                     Choices.outro,
@@ -40,7 +35,6 @@ namespace Commands
                     {
                         Path = "./public/outro/outro.mp3",
                         Message = "SMASH THAT LIKE BUTTON :thumbsup:",
-                        IsForPoints = false,
                         Reactions = new[] { new Emoji("👍"), new Emoji("👎") }
                     }
                 },
@@ -50,7 +44,6 @@ namespace Commands
                     {
                         Path = "./public/outro/royalistiq.mp3",
                         Message = "HOOWWH MY DAYS 😱",
-                        IsForPoints = false,
                     }
                 },
                 {
@@ -132,7 +125,7 @@ namespace Commands
         {
             public string Path { get; set; }
             public string Message { get; set; }
-            public bool IsForPoints { get; set; }
+            public bool IsForPoints { get; set; } = false;
             public Emoji[] Reactions { get; set; } = Array.Empty<Emoji>();
         }
     }

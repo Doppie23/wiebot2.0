@@ -3,15 +3,23 @@ using Discord;
 using Discord.WebSocket;
 using Discord.Interactions;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 
 class WieBot
 {
     private readonly DiscordSocketClient client;
+    private readonly IServiceProvider serviceProvider;
     private readonly InteractionService interactionService;
     private readonly Config config;
 
     public WieBot()
     {
+        // TODO: check if config has all required values
+        // TODO: add isDev to config
+        this.config = JsonConvert.DeserializeObject<Config>(File.ReadAllText("./config.json"));
+
+        this.serviceProvider = this.CreateProvider();
+
         this.client = new DiscordSocketClient(
             new DiscordSocketConfig() { GatewayIntents = GatewayIntents.All }
         );
@@ -21,9 +29,11 @@ class WieBot
             new InteractionServiceConfig() { LogLevel = LogSeverity.Verbose }
         );
 
-        // TODO: check if config has all required values
-        // TODO: add isDev to config
-        this.config = JsonConvert.DeserializeObject<Config>(File.ReadAllText("./config.json"));
+        this.interactionService.Log += (LogMessage message) =>
+        {
+            Console.WriteLine(message.ToString());
+            return Task.CompletedTask;
+        };
 
         this.client.Log += (LogMessage message) =>
         {
@@ -42,7 +52,10 @@ class WieBot
             {
                 var context = new SocketInteractionContext(this.client, interaction);
 
-                var result = await this.interactionService.ExecuteCommandAsync(context, null);
+                var result = await this.interactionService.ExecuteCommandAsync(
+                    context,
+                    this.serviceProvider
+                );
 
                 if (!result.IsSuccess)
                     switch (result.Error)
@@ -80,9 +93,19 @@ class WieBot
         };
     }
 
+    private IServiceProvider CreateProvider()
+    {
+        var collection = new ServiceCollection().AddSingleton(new DataBase());
+
+        return collection.BuildServiceProvider();
+    }
+
     public async Task Start()
     {
-        await this.interactionService.AddModulesAsync(Assembly.GetEntryAssembly(), null);
+        await this.interactionService.AddModulesAsync(
+            Assembly.GetEntryAssembly(),
+            this.serviceProvider
+        );
 
         await this.client.LoginAsync(TokenType.Bot, this.config.Token);
         await this.client.StartAsync();
