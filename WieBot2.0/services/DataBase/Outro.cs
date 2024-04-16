@@ -2,19 +2,27 @@ namespace DataBase;
 
 public partial class DataBaseContext
 {
-    public void AddOutroScore(ulong userId, ulong guildId, int score = 1)
+    /// <summary>
+    ///     Adds a score to the outro leaderboard
+    ///     <br />
+    ///     <br />
+    ///     If the user doesn't exist, it will be added
+    /// </summary>
+    public async Task AddOutroScore(ulong userId, ulong guildId, int score = 1)
     {
-        var user = this.GetUser(userId, guildId);
+        var user = await this.GetUser(userId, guildId);
         user.OutroScore += score;
-        this.SaveChanges();
+        await this.SaveChangesAsync();
     }
 
     public User[] GetOutroScores(ulong guildId)
     {
-        return this.Users
-            .Where(u => u.GuildId == guildId)
-            .OrderByDescending(x => x.OutroScore)
-            .Cast<User>()
-            .ToArray();
+        return [.. (
+            from user in this.Users
+            where user.GuildId == guildId
+            orderby user.OutroScore descending
+            select user
+        )
+            .Cast<User>()];
     }
 }

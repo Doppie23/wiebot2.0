@@ -128,7 +128,7 @@ namespace Commands
             await Task.WhenAll(tasks);
             if (lastLeft != null)
             {
-                this.DataBase.AddOutroScore(lastLeft.Id, this.Context.Guild.Id);
+                await this.DataBase.AddOutroScore(lastLeft.Id, this.Context.Guild.Id);
                 await Context.Interaction.FollowupAsync(lastLeft.Mention);
             }
         }
@@ -160,6 +160,15 @@ namespace Commands
                 var score = user.Item1;
                 var discordUser = user.Item2;
                 message += $"{discordUser.Mention} {score}\n";
+            }
+
+            if (message.Length == 0)
+            {
+                await this.Context.Interaction.RespondAsync(
+                    "Leaderboard is nog leeg...",
+                    ephemeral: true
+                );
+                return;
             }
 
             await RespondAsync(message);
