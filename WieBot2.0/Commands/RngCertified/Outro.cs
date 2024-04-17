@@ -208,9 +208,9 @@ namespace Commands
         [SlashCommand("outroleaderboard", "@boodschapjes")]
         public async Task Outroleaderboard()
         {
-            var outroUsers = DataBase.GetOutroScores(this.Context.Guild.Id);
+            var dbUsers = DataBase.GetOutroScores(this.Context.Guild.Id);
 
-            if (outroUsers.Length == 0)
+            if (dbUsers.Length == 0)
             {
                 await this.Context.Interaction.RespondAsync(
                     "Leaderboard is nog leeg...",
@@ -221,20 +221,19 @@ namespace Commands
 
             var discordUsers = await User.GetUsersByIdsAsync(
                 this.Context.Guild,
-                outroUsers.Select(x => x.Id).ToArray()
+                dbUsers.Select(x => x.Id).ToArray()
             );
 
-            // create embed
             var embed = new EmbedBuilder()
             {
                 Title = "Vaakst het laatste de call verlaten",
                 Color = Rng.RandomColor(),
-                ThumbnailUrl = discordUsers[outroUsers[0].Id].GetDisplayAvatarUrl()
+                ThumbnailUrl = discordUsers[dbUsers[0].Id].GetDisplayAvatarUrl()
             };
 
-            for (var i = 0; i < outroUsers.Length; i++)
+            for (var i = 0; i < dbUsers.Length; i++)
             {
-                var user = outroUsers[i];
+                var user = dbUsers[i];
                 var discordUser = discordUsers[user.Id];
 
                 embed.AddField(

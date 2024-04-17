@@ -10,10 +10,7 @@ static class User
     /// <param name="client"></param>
     /// <param name="userIds"></param>
     /// <returns>A dictionary of users with as key the ID</returns>
-    public static async Task<Dictionary<ulong, IGuildUser>> GetUsersByIdsAsync(
-        IGuild guild,
-        ulong[] userIds
-    )
+    public static async Task<IdToUser> GetUsersByIdsAsync(IGuild guild, ulong[] userIds)
     {
         List<Task<(ulong, IGuildUser)>> tasks = new();
 
@@ -30,7 +27,7 @@ static class User
 
         var idAndUsers = await Task.WhenAll(tasks);
 
-        Dictionary<ulong, IGuildUser> dict = new();
+        IdToUser dict = new();
 
         foreach (var (id, user) in idAndUsers)
         {
@@ -40,4 +37,6 @@ static class User
 
         return dict;
     }
+
+    public class IdToUser : Dictionary<ulong, IGuildUser> { }
 }
