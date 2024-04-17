@@ -22,14 +22,14 @@ public partial class DataBaseContext
     /// <returns></returns>
     public User[] GetOutroScores(ulong guildId, int limit = 15)
     {
-        return [.. (
-                from user in this.Users
-                where user.GuildId == guildId && user.OutroScore != 0
-                orderby user.OutroScore descending
-                select user 
-            )
+        return (
+            from user in this.Users
+            where user.GuildId == guildId && user.OutroScore != 0
+            orderby user.OutroScore descending
+            select user
+        )
             .Take(limit)
             .Cast<User>()
-        ];
+            .ToArray();
     }
 }
