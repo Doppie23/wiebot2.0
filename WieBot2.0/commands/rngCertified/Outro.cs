@@ -138,31 +138,7 @@ namespace Commands
         {
             var outroUsers = DataBase.GetOutroScores(this.Context.Guild.Id);
 
-            List<Task<(int, IUser)>> tasks = new();
-
-            foreach (var user in outroUsers)
-            {
-                async Task<(int, IUser)> task()
-                {
-                    var discordUser = await Context.Client.GetUserAsync(user.Id);
-                    return (user.OutroScore, discordUser);
-                }
-
-                tasks.Add(task());
-            }
-
-            var users = (await Task.WhenAll(tasks)).ToList();
-            users.Sort((x, y) => x.Item1 - y.Item1);
-
-            var message = "";
-            foreach (var user in users)
-            {
-                var score = user.Item1;
-                var discordUser = user.Item2;
-                message += $"{discordUser.Mention} {score}\n";
-            }
-
-            if (message.Length == 0)
+            if (outroUsers.Length == 0)
             {
                 await this.Context.Interaction.RespondAsync(
                     "Leaderboard is nog leeg...",
@@ -171,7 +147,34 @@ namespace Commands
                 return;
             }
 
-            await RespondAsync(message);
+            var discordUsers = await User.GetUsersByIdsAsync(
+                this.Context.Client,
+                outroUsers.Select(x => x.Id).ToArray()
+            );
+
+            // create embed
+            var embed = new EmbedBuilder()
+            {
+                Title = "Vaakst het laatste de call verlaten",
+                Color = Color.Gold,
+                ThumbnailUrl = discordUsers[outroUsers[0].Id].GetDisplayAvatarUrl()
+            };
+
+            for (var i = 0; i < outroUsers.Length; i++)
+            {
+                var user = outroUsers[i];
+                var discordUser = discordUsers[user.Id];
+
+                embed.AddField(
+                    new EmbedFieldBuilder()
+                    {
+                        Name = $"{i + 1}: {discordUser.GlobalName}",
+                        Value = $"{user.OutroScore}x"
+                    }
+                );
+            }
+
+            await RespondAsync(embed: embed.Build());
         }
     }
 }
