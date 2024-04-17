@@ -172,7 +172,7 @@ namespace Commands
             var embed = new EmbedBuilder()
             {
                 Title = "Outro",
-                Color = Rng.RandomColor(),
+                Color = Utils.General.RandomColor(),
                 ThumbnailUrl = lastLeft.GetDisplayAvatarUrl()
             };
 
@@ -183,7 +183,9 @@ namespace Commands
 
         private static int GetOutroRngPoints()
         {
-            bool gotMainPrize = Rng.RandomElement(
+            var random = new BetterRandom();
+
+            bool gotMainPrize = random.RandomElement(
                 Enumerable.Repeat(false, 20).Concat(new bool[] { true }).ToArray()
             );
 
@@ -194,9 +196,9 @@ namespace Commands
             }
             else
             {
-                rngPoints = Rng.Random.Next(10, 100);
+                rngPoints = random.Next(10, 100);
 
-                var positive = Rng.RandomElement(
+                var positive = random.RandomElement(
                     Enumerable.Repeat(true, 9).Concat(new bool[] { false }).ToArray()
                 );
                 rngPoints *= positive ? 1 : -1;
@@ -227,7 +229,7 @@ namespace Commands
             var embed = new EmbedBuilder()
             {
                 Title = "Vaakst het laatste de call verlaten",
-                Color = Rng.RandomColor(),
+                Color = Utils.General.RandomColor(),
                 ThumbnailUrl = discordUsers[dbUsers[0].Id].GetDisplayAvatarUrl()
             };
 

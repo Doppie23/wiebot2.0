@@ -3,10 +3,10 @@ namespace DataBase;
 public partial class DataBaseContext
 {
     /// <summary>
-    /// Adds a score to the outro leaderboard
-    /// <br />
-    /// <br />
-    /// If the user doesn't exist, it will be added
+    ///     Adds a score to the outro leaderboard
+    ///     <br />
+    ///     <br />
+    ///     If the user doesn't exist, it will be added
     /// </summary>
     public async Task AddOutroScore(ulong userId, ulong guildId, int score = 1)
     {
@@ -16,7 +16,7 @@ public partial class DataBaseContext
     }
 
     /// <summary>
-    /// Get the outro leaderboard for a guild, sorted by score
+    ///     Get the outro leaderboard for a guild, sorted by score
     /// </summary>
     /// <param name="guildId"></param>
     /// <returns></returns>

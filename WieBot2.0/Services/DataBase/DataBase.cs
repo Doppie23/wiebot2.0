@@ -34,7 +34,7 @@ public class User
     public ulong GuildId { get; set; }
 
     /// <summary>
-    /// Will be null if the user is not part of the rng game
+    ///     Will be null if the user is not part of the rng game
     /// </summary>
     public int? RngScore { get; set; } = null;
     public int OutroScore { get; set; } = 0;

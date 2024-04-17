@@ -14,7 +14,7 @@ namespace Commands
             if (dbUsers.Length == 0)
             {
                 await RespondAsync(
-                    "Er doet niemand mee, dus is er geen scorebord.",
+                    "Er doet niemand mee, er is dus geen scorebord.",
                     ephemeral: true
                 );
                 return;
@@ -28,7 +28,7 @@ namespace Commands
             var embed = new EmbedBuilder()
             {
                 Title = "Beste RNG",
-                Color = Rng.RandomColor(),
+                Color = Utils.General.RandomColor(),
                 ThumbnailUrl = discordUsers[dbUsers[0].Id].GetDisplayAvatarUrl()
             };
 

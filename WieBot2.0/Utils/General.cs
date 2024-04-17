@@ -1,22 +1,10 @@
 namespace Utils;
 
-public class Rng
+public static class General
 {
-    static readonly Random random = new();
-
-    public static T RandomElement<T>(T[] values)
-    {
-        var i = random.Next(0, values.Length);
-        return values[i];
-    }
-
-    public static Random Random
-    {
-        get { return random; }
-    }
-
     public static Discord.Color RandomColor()
     {
+        var random = new BetterRandom();
         Discord.Color[] colors = new[]
         {
             Discord.Color.Teal,
@@ -40,6 +28,6 @@ public class Rng
             Discord.Color.DarkGrey,
             Discord.Color.DarkerGrey,
         };
-        return RandomElement(colors);
+        return random.RandomElement(colors);
     }
 }

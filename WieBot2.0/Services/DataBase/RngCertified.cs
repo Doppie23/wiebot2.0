@@ -3,9 +3,9 @@ namespace DataBase;
 public partial class DataBaseContext
 {
     /// <summary>
-    /// Adds a score to the rng leaderboard
-    /// <br />
-    /// Score cannot be negative
+    ///     Adds a score to the rng leaderboard
+    ///     <br />
+    ///     Score cannot be negative
     /// </summary>
     public async Task AddRngScore(ulong userId, ulong guildId, int score)
     {
@@ -22,10 +22,8 @@ public partial class DataBaseContext
     }
 
     /// <summary>
-    /// Get the outro leaderboard for a guild, sorted by score
+    ///     Get the outro leaderboard for a guild, sorted by score
     /// </summary>
-    /// <param name="guildId"></param>
-    /// <returns></returns>
     public User[] GetRngScores(ulong guildId, int limit = 15)
     {
         return this.GetAllRngUsers(guildId).Take(limit).ToArray();

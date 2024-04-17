@@ -5,11 +5,9 @@ namespace Utils;
 static class User
 {
     /// <summary>
-    /// Get a dictionary of users by their IDs
+    ///     Get a dictionary of users by their IDs
     /// </summary>
-    /// <param name="client"></param>
-    /// <param name="userIds"></param>
-    /// <returns>A dictionary of users with as key the ID</returns>
+    /// <returns> A dictionary of users with as key the ID </returns>
     public static async Task<IdToUser> GetUsersByIdsAsync(IGuild guild, ulong[] userIds)
     {
         List<Task<(ulong, IGuildUser)>> tasks = new();
