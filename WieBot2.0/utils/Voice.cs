@@ -2,60 +2,59 @@ using System.Diagnostics;
 using Discord;
 using Discord.Audio;
 
-namespace Utils
+namespace Utils;
+
+static class Voice
 {
-    static class Voice
+    public static async Task SendAsync(IAudioClient client, string path)
     {
-        public static async Task SendAsync(IAudioClient client, string path)
+        using var ffmpeg = Voice.CreateStream(path);
+        using var output = ffmpeg.StandardOutput.BaseStream;
+        using var discord = client.CreatePCMStream(AudioApplication.Voice);
+        try
         {
-            using var ffmpeg = Voice.CreateStream(path);
-            using var output = ffmpeg.StandardOutput.BaseStream;
-            using var discord = client.CreatePCMStream(AudioApplication.Voice);
-            try
-            {
-                await output.CopyToAsync(discord);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
-            finally
-            {
-                await discord.FlushAsync();
-            }
+            await output.CopyToAsync(discord);
         }
-
-        private static Process CreateStream(string path)
+        catch (Exception ex)
         {
-            return Process.Start(
-                new ProcessStartInfo
-                {
-                    FileName = "ffmpeg",
-                    Arguments =
-                        $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 pipe:1",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                }
-            );
+            Console.WriteLine(ex);
         }
-
-        public static async Task<IGuildUser[]> GetUsersInVoiceChannelAsync(IVoiceChannel channel)
+        finally
         {
-            var users = new List<IGuildUser>();
+            await discord.FlushAsync();
+        }
+    }
 
-            var peopleInVoiceChannel = channel.GetUsersAsync();
-            await foreach (var usersBatch in peopleInVoiceChannel)
+    private static Process CreateStream(string path)
+    {
+        return Process.Start(
+            new ProcessStartInfo
             {
-                foreach (var user in usersBatch)
+                FileName = "ffmpeg",
+                Arguments =
+                    $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 pipe:1",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+            }
+        );
+    }
+
+    public static async Task<IGuildUser[]> GetUsersInVoiceChannelAsync(IVoiceChannel channel)
+    {
+        var users = new List<IGuildUser>();
+
+        var peopleInVoiceChannel = channel.GetUsersAsync();
+        await foreach (var usersBatch in peopleInVoiceChannel)
+        {
+            foreach (var user in usersBatch)
+            {
+                if (user.VoiceChannel == channel)
                 {
-                    if (user.VoiceChannel == channel)
-                    {
-                        users.Add(user);
-                    }
+                    users.Add(user);
                 }
             }
-
-            return users.ToArray();
         }
+
+        return users.ToArray();
     }
 }

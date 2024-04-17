@@ -28,11 +28,11 @@ namespace Commands
         {
             public string Path { get; set; }
             public string Message { get; set; }
-            public bool IsForPoints { get; set; } = false;
+            public bool IsForRngPoints { get; set; } = false;
             public Emoji[] Reactions { get; set; } = Array.Empty<Emoji>();
         }
 
-        private static readonly Dictionary<Choices, OutroInfo> OutroPath =
+        private static readonly Dictionary<Choices, OutroInfo> OutroInfoLookup =
             new()
             {
                 {
@@ -62,16 +62,14 @@ namespace Commands
                     {
                         Path = "./public/outro/royalistiq.mp3",
                         Message = "RNG Certified 🍀",
-                        IsForPoints = true,
+                        IsForRngPoints = true,
                     }
                 },
             };
 
         [SlashCommand("outro", "Epic outro", runMode: Discord.Interactions.RunMode.Async)]
-        public async Task Outro([Name("opties")] RngCertified.Choices selectedOutro)
+        public async Task Outro([Name("opties")] RngCertified.Choices selectedOutroChoice)
         {
-            // TODO: rng outro points
-
             var channel = (Context.User as IGuildUser)?.VoiceChannel;
             if (channel == null)
             {
@@ -79,7 +77,27 @@ namespace Commands
                 return;
             }
 
-            var outro = OutroPath[selectedOutro];
+            var outro = OutroInfoLookup[selectedOutroChoice];
+            var usersInChannel = await Voice.GetUsersInVoiceChannelAsync(channel);
+
+            if (outro.IsForRngPoints)
+            {
+                // check if all users needed are in the channel
+                var usersNeeded = DataBase.GetAllRngUsers(this.Context.Guild.Id);
+                if (
+                    !usersNeeded.All(
+                        usersNeeded => usersInChannel.Any(user => user.Id == usersNeeded.Id)
+                    )
+                )
+                {
+                    await RespondAsync(
+                        "Niet iedereen die meedoet zit in call, dus deze outro kan niet.",
+                        ephemeral: true
+                    );
+                    return;
+                }
+            }
+
             if (!File.Exists(outro.Path))
             {
                 throw new Exception($"Outro file {outro.Path} not found");
@@ -102,8 +120,6 @@ namespace Commands
             await Voice.SendAsync(audioClient, outro.Path);
 
             // done playing
-            var usersInChannel = await Voice.GetUsersInVoiceChannelAsync(channel);
-
             var tasks = new List<Task>
             {
                 channel.DisconnectAsync() // disconnect self
@@ -126,11 +142,67 @@ namespace Commands
             }
 
             await Task.WhenAll(tasks);
-            if (lastLeft != null)
+
+            await this.DataBase.AddOutroScore(lastLeft.Id, this.Context.Guild.Id);
+
+            if (!outro.IsForRngPoints)
             {
-                await this.DataBase.AddOutroScore(lastLeft.Id, this.Context.Guild.Id);
                 await Context.Interaction.FollowupAsync(lastLeft.Mention);
             }
+            else
+            {
+                if (!DataBase.IsRngUser(lastLeft.Id, this.Context.Guild.Id))
+                {
+                    await Context.Interaction.FollowupAsync(
+                        $"{lastLeft.Mention} doet niet mee, niemand krijgt er dus punten bij."
+                    );
+                    return;
+                }
+
+                int rngPoints = GetOutroRngPoints();
+
+                await Context.Interaction.FollowupAsync(
+                    embed: CreateOutroRngEmbed(lastLeft, rngPoints)
+                );
+            }
+        }
+
+        private static Embed CreateOutroRngEmbed(IGuildUser lastLeft, int rngPoints)
+        {
+            var embed = new EmbedBuilder()
+            {
+                Title = "Outro",
+                Color = Rng.RandomColor(),
+                ThumbnailUrl = lastLeft.GetDisplayAvatarUrl()
+            };
+
+            embed.AddField("Winnaar:", lastLeft.DisplayName);
+            embed.AddField("Punten:", rngPoints);
+            return embed.Build();
+        }
+
+        private static int GetOutroRngPoints()
+        {
+            bool gotMainPrize = Rng.RandomElement(
+                Enumerable.Repeat(false, 20).Concat(new bool[] { true }).ToArray()
+            );
+
+            int rngPoints;
+            if (gotMainPrize)
+            {
+                rngPoints = 1000;
+            }
+            else
+            {
+                rngPoints = Rng.Random.Next(10, 100);
+
+                var positive = Rng.RandomElement(
+                    Enumerable.Repeat(true, 9).Concat(new bool[] { false }).ToArray()
+                );
+                rngPoints *= positive ? 1 : -1;
+            }
+
+            return rngPoints;
         }
 
         [SlashCommand("outroleaderboard", "@boodschapjes")]
@@ -148,7 +220,7 @@ namespace Commands
             }
 
             var discordUsers = await User.GetUsersByIdsAsync(
-                this.Context.Client,
+                this.Context.Guild,
                 outroUsers.Select(x => x.Id).ToArray()
             );
 
@@ -156,7 +228,7 @@ namespace Commands
             var embed = new EmbedBuilder()
             {
                 Title = "Vaakst het laatste de call verlaten",
-                Color = Color.Gold,
+                Color = Rng.RandomColor(),
                 ThumbnailUrl = discordUsers[outroUsers[0].Id].GetDisplayAvatarUrl()
             };
 
@@ -168,7 +240,7 @@ namespace Commands
                 embed.AddField(
                     new EmbedFieldBuilder()
                     {
-                        Name = $"{i + 1}: {discordUser.GlobalName}",
+                        Name = $"{i + 1}: {discordUser.DisplayName}",
                         Value = $"{user.OutroScore}x"
                     }
                 );
