@@ -1,7 +1,13 @@
+# WieBot 2.0
+
+Discord bot with some random features.
+
+Successor to [WieBot](https://github.com/Doppie23/WieBot)
+
 ## Dependencies
 
 - Dotnet 8.0
-- If running on linux change binaries in `lib/` to binaries compiled for your system
+- If running on a system that is not windows, change binaries in `lib/` to binaries compiled for your system.
 - FFmpeg needs to be available on path
 
 ## Running
